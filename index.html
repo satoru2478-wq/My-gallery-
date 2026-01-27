@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Memories</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Playfair Display', serif; overflow-x: hidden; }
+        .live-background {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background: linear-gradient(-45deg, #ff9a9e, #fad0c4, #fbc2eb, #a18cd1, #ffdde1);
+            background-size: 400% 400%; animation: gradientAnim 4s ease infinite; 
+        }
+        @keyframes gradientAnim { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .live-background::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M20 30l-2.42-2.18C9 19.1 3.5 14.36 3.5 8.5 3.5 4.16 6.94 1 11.5 1c2.3 0 4.48 1.1 6 2.86l2.5 2.87 2.5-2.87C24.02 2.1 26.2 1 28.5 1c4.56 0 8 3.16 8 7.5 0 5.86-5.5 10.6-14.08 19.32L20 30z'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: 60px 60px; opacity: 0.6;
+        }
+        #landing-page {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            background: linear-gradient(120deg, #f6d365 0%, #fda085 100%);
+            z-index: 999; transition: opacity 0.8s ease;
+        }
+        .heart-btn {
+            position: relative; padding: 15px 50px; font-size: 1.8rem; font-family: 'Dancing Script', cursive;
+            color: white; border: none; border-radius: 50px; cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-weight: bold; background-color: #ff4757;
+            background-image: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z' fill='%23ffffff' fill-opacity='0.3'/%3E%3C/svg%3E");
+            background-size: 30px 30px; animation: moveHearts 3s linear infinite; transition: transform 0.1s; z-index: 1001; 
+        }
+        @keyframes moveHearts { from { background-position: 0 0; } to { background-position: 30px 30px; } }
+        .popped { animation: burst 0.1s forwards !important; pointer-events: none; }
+        @keyframes burst { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+        #gallery-page { display: none; padding: 20px; }
+        .gallery-container { column-count: 3; column-gap: 20px; max-width: 1200px; margin: 0 auto; }
+        @media (max-width: 768px) { .gallery-container { column-count: 2; column-gap: 10px; } }
+        .polaroid {
+            background: white; padding: 10px 10px 50px 10px; margin-bottom: 30px;
+            box-shadow: 3px 8px 20px rgba(0,0,0,0.15); display: inline-block; width: 100%;
+            position: relative; transform: translateZ(0); transition: transform 0.3s;
+        }
+        .polaroid:hover { z-index: 50; transform: scale(1.05); }
+        .polaroid img { width: 100%; height: auto; display: block; filter: sepia(0.15); min-height: 150px; background: #eee; }
+        .tape { position: absolute; top: -12px; left: 50%; transform: translateX(-50%) rotate(-2deg); width: 100px; height: 25px; background: rgba(255,255,255,0.5); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .sticker { position: absolute; font-size: 2.5rem; z-index: 10; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.2)); }
+    </style>
+</head>
+<body>
+    <div class="live-background"></div>
+    <div id="landing-page"><button id="start-btn" class="heart-btn" onclick="popAndBlast()">Explore</button></div>
+    <div id="gallery-page"><div class="gallery-container" id="gallery-grid"></div></div>
+
+    <script>
+        const stickers = ['💋', '❤️', '🌺', '🌻', '🎀', '✨', '🩹'];
+        
+        // --- UPDATED FOR 34 PHOTOS ---
+        const totalSourceImages = 34; // Code now stops at 34
+        const totalFramesToDisplay = 500; // Will repeat your 34 photos to fill 500 frames
+        let loadedFrames = 0;
+
+        function popAndBlast() {
+            const btn = document.getElementById('start-btn');
+            const rect = btn.getBoundingClientRect();
+            const originX = (rect.left + rect.width / 2) / window.innerWidth;
+            const originY = (rect.top + rect.height / 2) / window.innerHeight;
+            confetti({ particleCount: 200, spread: 360, startVelocity: 30, origin: { x: originX, y: originY }, colors: ['#ff4757', '#ffccd5', '#ffffff'], shapes: ['circle', 'heart'], zIndex: 1002 });
+            btn.classList.add('popped');
+            setTimeout(() => {
+                document.getElementById('landing-page').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('landing-page').style.display = 'none';
+                    document.getElementById('gallery-page').style.display = 'block';
+                    loadPhotos(15);
+                }, 800);
+            }, 300);
+        }
+
+        function createPolaroid() {
+            const div = document.createElement('div');
+            div.className = 'polaroid';
+            div.style.transform = `rotate(${Math.random() * 6 - 3}deg)`;
+            
+            const img = document.createElement('img');
+            // Pick random number between 1 and 34
+            const randomID = Math.floor(Math.random() * totalSourceImages) + 1;
+            
+            // --- UNIVERSAL LOADER FOR 34 IMAGES ---
+            // 1. Try "01.jpg"
+            const paddedName = String(randomID).padStart(2, '0') + ".jpg";
+            img.src = paddedName;
+
+            img.onerror = function() {
+                // 2. If 01.jpg fails, try "1.jpg"
+                if (this.src.includes(paddedName)) {
+                    this.src = randomID + ".jpg";
+                }
+                // 3. If that fails, try "01.JPG"
+                else if (this.src.endsWith(randomID + ".jpg")) {
+                    this.src = String(randomID).padStart(2, '0') + ".JPG";
+                }
+            };
+            
+            img.loading = "lazy";
+            div.appendChild(img);
+            div.appendChild(Object.assign(document.createElement('div'), {className: 'tape'}));
+
+            if (Math.random() > 0.4) {
+                const s = document.createElement('div');
+                s.className = 'sticker';
+                s.innerText = stickers[Math.floor(Math.random() * stickers.length)];
+                const pos = Math.floor(Math.random() * 4);
+                if (pos===0) {s.style.top='-15px';s.style.left='-15px';} 
+                else if (pos===1) {s.style.top='-15px';s.style.right='-15px';} 
+                else if (pos===2) {s.style.bottom='10px';s.style.left='-15px';} 
+                else {s.style.bottom='10px';s.style.right='-15px';}
+                div.appendChild(s);
+            }
+            return div;
+        }
+
+        function loadPhotos(amount) {
+            const container = document.getElementById('gallery-grid');
+            for(let i=0; i<amount; i++) {
+                if (loadedFrames >= totalFramesToDisplay) return;
+                container.appendChild(createPolaroid());
+                loadedFrames++;
+            }
+        }
+
+        window.addEventListener('scroll', () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+                loadPhotos(6);
+            }
+        });
+    </script>
+</body>
+</html>
